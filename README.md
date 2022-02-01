@@ -2,7 +2,9 @@
 
 ## About  
 
-Upon completion, this project will hope to simulate a wireless communication system as shown below: 
+Upon completion, this project will hope to simulate a wireless communication system as shown below:
+
+![Test Image 4](https://github.com/hesheen-GH/Wireless_Communication_System_Simulation/blob/master/block_diagram.jpg)
 
 
 
