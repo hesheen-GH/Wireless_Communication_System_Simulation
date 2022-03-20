@@ -6,7 +6,7 @@ close all;
 clc;
 
 %% Pseudorandom binary sequence (PRBS)
-N = 10; %number of bits, must be even
+N = 50000; %number of bits, must be even
 %generates a vector of length num_bits of numbers uniformly distributes between 0 and 1.
 rng(1,'twister');
 signal=floor(rand(1,N)+0.5); %RNG+0.5 is a vector of numbers uniformly distributed between 0.5 and 1.5. Floor rounds down, so 50 percent should be 1 and 50 percent 0.
@@ -15,13 +15,12 @@ signal=floor(rand(1,N)+0.5); %RNG+0.5 is a vector of numbers uniformly distribut
 %signal = [1 0 1 0];
 
 %% main.m
-Rb = 1; %bit rate
-fc = 45*Rb; %carrier frequency
+Rb = 100; %bit rate
+fc = 10*Rb; %carrier frequency
 fs = 8*(fc+Rb); %Nyquist Sampling Rate
 A = 5; %amplitude
-M = 4; %M-ary
 
-tx = Transmitter(N,Rb,A,fs,M);
+tx = Transmitter(N,Rb,A,fs);
 signal = tx.polar_NRZ_encoder(signal);
 signal = tx.modulator(signal,fc);
 
@@ -38,7 +37,6 @@ rx = Receiver(tx);
 rx.constellation(output1,output2,SNR);
 [BER,SER] = rx.BERT(output1,output2);
 figure;
-%BER = reshape(BER(1,1,:),[],1);
 semilogy(SNR,BER);
 hold on;
 semilogy(SNR,SER);

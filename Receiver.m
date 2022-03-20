@@ -16,11 +16,6 @@ classdef Receiver < handle
         function [BER,SER] = BERT(obj,signal1,signal2)
             
             Ts = obj.Tx.bit_period*2;
-%             constellation_points = [obj.Tx.amplitude*sqrt(Ts/2), obj.Tx.amplitude*sqrt(Ts/2); ...
-%                                    -obj.Tx.amplitude*sqrt(Ts/2), obj.Tx.amplitude*sqrt(Ts/2); ...
-%                                    obj.Tx.amplitude*sqrt(Ts/2), -obj.Tx.amplitude*sqrt(Ts/2); ...
-%                                    -obj.Tx.amplitude*sqrt(Ts/2), -obj.Tx.amplitude*sqrt(Ts/2)];
-             
             bit_sequence = [];                   
                                
             for x=1:size(signal1,1)
@@ -54,16 +49,7 @@ classdef Receiver < handle
                 bit_sequence = [];
                  
             end 
-                   
-            
-%                                              
-%             signal1 = reshape(signal1.',[1,size(signal1.')]);
-%             distance = norm(bsxfun(@minus, constellation_points, signal1));
-%             distance = permute(distance, [2 1 3]);          
-%             [min_distance, index] = min(distance,[],2);
-%             index = permute(index, [2 1 3]);
-%             index(index>=2)=0;
-%             BER = sum(xor(obj.Tx.bit_sequence,index))/length(obj.Tx.bit_sequence);
+
         end 
         
         function [output1,output2] = sampler(obj,signal1,signal2,SNR)
@@ -122,10 +108,7 @@ classdef Receiver < handle
         end 
         
         
-        function [output1,output2] = correlator(obj,signal,SNR)
-            
-            %t = 0:obj.Tx.sampling_period:obj.Tx.bit_period-obj.Tx.sampling_period;
-            
+        function [output1,output2] = correlator(obj,signal,SNR)            
             
             Ts = 2*obj.Tx.bit_period;
             t = obj.Tx.IQ_time;
@@ -138,8 +121,6 @@ classdef Receiver < handle
             %nTs = obj.Tx.samples_per_bit;
             output1 = zeros(obj.Tx.num_bits/2,length(SNR),nTs);
             output2 = zeros(obj.Tx.num_bits/2,length(SNR),nTs);
-            %figure;
-            %plot(obj.Tx.time,signal(1,:).*basis);
             
             for j = 1:obj.Tx.num_bits/2
                 
@@ -148,32 +129,12 @@ classdef Receiver < handle
                 output1(j,:,:) = y1;
                 output2(j,:,:) = y2;
                 
-                w = j*nTs;
-                %t = t + obj.Tx.bit_period;
-                
+                w = j*nTs;   
             end 
             
             output1 = permute(output1,[2 3 1]);
             output2 = permute(output2,[2 3 1]);
-            
-            
-%             g_T = sqrt(2/obj.Tx.bit_period)*ones(1,length(obj.Tx.time));
-%             basis = g_T.*cos(2*pi*obj.Tx.center_frequency.*obj.Tx.time);
-%             figure;
-%             plot(obj.Tx.time,obj.signal.*basis);
-%             title('test');
-%           
-                    
-%             for j = 1:obj.Tx.num_bits
-%                 for i = 1:(l_t)            
-%                     y(j,i)=sum(obj.signal((1+w):(i+w)).*basis((1:i)));
-%                     y(j,i)=trapz(t,obj.signal((1+w):(l_t+w)).*basis);
-%                 end 
-%                 w = j*obj.Tx.samples_per_bit;
-%                 t = t + obj.Tx.bit_period;
-%             end 
-%             
-            
+                       
             output1= reshape(output1,[size(output1,1), size(output1,2)*size(output1,3)]);
             output2= reshape(output2,[size(output2,1), size(output2,2)*size(output2,3)]);
             
