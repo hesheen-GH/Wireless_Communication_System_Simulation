@@ -13,78 +13,149 @@ classdef Receiver < handle
             obj.Tx = tx; 
         end 
         
-        function BER = BERT(obj,signal)
+        function [BER,SER] = BERT(obj,signal1,signal2)
             
-            constellation_points = [obj.Tx.amplitude*sqrt(obj.Tx.bit_period/2); -obj.Tx.amplitude*sqrt(obj.Tx.bit_period/2)];
-            signal = reshape(signal.',[1,size(signal.')]);
-            distance = abs(bsxfun(@minus, constellation_points, signal));
-            distance = permute(distance, [2 1 3]);          
-            [min_distance, index] = min(distance,[],2);
-            index = permute(index, [2 1 3]);
-            index(index>=2)=0;
-            BER = sum(xor(obj.Tx.bit_sequence,index))/length(obj.Tx.bit_sequence);
+            Ts = obj.Tx.bit_period*2;
+%             constellation_points = [obj.Tx.amplitude*sqrt(Ts/2), obj.Tx.amplitude*sqrt(Ts/2); ...
+%                                    -obj.Tx.amplitude*sqrt(Ts/2), obj.Tx.amplitude*sqrt(Ts/2); ...
+%                                    obj.Tx.amplitude*sqrt(Ts/2), -obj.Tx.amplitude*sqrt(Ts/2); ...
+%                                    -obj.Tx.amplitude*sqrt(Ts/2), -obj.Tx.amplitude*sqrt(Ts/2)];
+             
+            bit_sequence = [];                   
+                               
+            for x=1:size(signal1,1)
+                
+                for y=1:size(signal1,2)
+                    
+                    distance_00 = sqrt((-obj.Tx.amplitude*sqrt(Ts/2)-signal1(x,y))^2+(-obj.Tx.amplitude*sqrt(Ts/2)-signal2(x,y))^2);
+                    distance_01 = sqrt((-obj.Tx.amplitude*sqrt(Ts/2)-signal1(x,y))^2+(obj.Tx.amplitude*sqrt(Ts/2)-signal2(x,y))^2);
+                    distance_10 = sqrt((obj.Tx.amplitude*sqrt(Ts/2)-signal1(x,y))^2+(-obj.Tx.amplitude*sqrt(Ts/2)-signal2(x,y))^2);
+                    distance_11 = sqrt((obj.Tx.amplitude*sqrt(Ts/2)-signal1(x,y))^2+(obj.Tx.amplitude*sqrt(Ts/2)-signal2(x,y))^2);
+                    
+                    distance = [distance_00, distance_01, distance_10, distance_11];
+                    [distance,index] = min(distance);
+                    
+                    switch index
+                        case 1
+                            bit_sequence = [bit_sequence,0,0];
+                        case 2
+                            bit_sequence = [bit_sequence,0,1];
+                        case 3
+                            bit_sequence = [bit_sequence,1,0];
+                        case 4
+                            bit_sequence = [bit_sequence,1,1];
+                    end 
+                    
+                end 
+                
+                BER(x) = sum(xor(obj.Tx.bit_sequence,bit_sequence))/length(obj.Tx.bit_sequence);
+                ser = xor(obj.Tx.bit_sequence,bit_sequence);
+                SER(x) = sum(or(ser(1:2:end),ser(2:2:end)))/(length(obj.Tx.bit_sequence)/2);
+                bit_sequence = [];
+                 
+            end 
+                   
+            
+%                                              
+%             signal1 = reshape(signal1.',[1,size(signal1.')]);
+%             distance = norm(bsxfun(@minus, constellation_points, signal1));
+%             distance = permute(distance, [2 1 3]);          
+%             [min_distance, index] = min(distance,[],2);
+%             index = permute(index, [2 1 3]);
+%             index(index>=2)=0;
+%             BER = sum(xor(obj.Tx.bit_sequence,index))/length(obj.Tx.bit_sequence);
         end 
         
-        function output = sampler(obj,signal,SNR)
-            output = signal(:,obj.Tx.samples_per_bit:obj.Tx.samples_per_bit:end);
+        function [output1,output2] = sampler(obj,signal1,signal2,SNR)
+            
+            output1 = signal1(:,obj.Tx.samples_per_bit:obj.Tx.samples_per_bit:end);
+            output2 = signal2(:,obj.Tx.samples_per_bit:obj.Tx.samples_per_bit:end);
+            
             figure;
-            stem(output(1,:));
-            title('Sampled Correlator Output');
+            stem(output1(1,:));
+            title('Sampled Correlator I - Output');
             hold on;
-            stem(output(end,:));       
+            stem(output1(end,:));       
             ylabel('Amplitude');
-            xlabel('n*Tb');
+            xlabel('n*Ts');
             legend('SNR = ' + string(SNR(1)) + ' dB', 'SNR = ' + string(SNR(end)) + ' dB');
+            hold off;
+            
+            figure;
+            stem(output2(1,:));
+            title('Sampled Correlator Q - Output');
+            hold on;
+            stem(output2(end,:));       
+            ylabel('Amplitude');
+            xlabel('n*Ts');
+            legend('SNR = ' + string(SNR(1)) + ' dB', 'SNR = ' + string(SNR(end)) + ' dB');
+            hold off;
 
         end 
         
         
-        function [] = constellation(obj,signal,SNR)
+        function [] = constellation(obj,signal1,signal2,SNR)
             
             figure;
-            scatter(signal(1,:),zeros(size(signal,2),1));
-            title('BPSK Constellation Diagram');
+            scatter(signal1(1,:),signal2(1,:),'filled');
+            title('QPSK Constellation Diagram');
             grid on;
             hold on;
-            scatter(signal(end,:),zeros(size(signal,2),1));
+            scatter(signal1(end,:),signal2(end,:),'filled');
             hold on;
-            scatter([obj.Tx.amplitude*sqrt(obj.Tx.bit_period/2); -obj.Tx.amplitude*sqrt(obj.Tx.bit_period/2)] ,zeros(2,1),60,'green', 'filled');
-            xlabel('Ψ1(t)');
+            Ts = obj.Tx.bit_period*2;
+            scatter(obj.Tx.amplitude*sqrt(Ts/2),obj.Tx.amplitude*sqrt(Ts/2),60,'green', 'filled');
+            hold on;
+            scatter(-obj.Tx.amplitude*sqrt(Ts/2),obj.Tx.amplitude*sqrt(Ts/2),60,'green', 'filled');
+            hold on;
+            scatter(obj.Tx.amplitude*sqrt(Ts/2),-obj.Tx.amplitude*sqrt(Ts/2),60,'green', 'filled');
+            hold on;
+            scatter(-obj.Tx.amplitude*sqrt(Ts/2),-obj.Tx.amplitude*sqrt(Ts/2),60,'green', 'filled');
+            hold on;
+            xlabel('Ψ0(t)');
+            ylabel('Ψ1(t)');
             yline(0);
             xline(0);
-            legend('SNR = ' + string(SNR(1)) + ' dB', 'SNR = ' + string(SNR(end)) + ' dB','A*sqrt(Tb/2)','x=0','y=0');
-
-
+            legend('SNR = ' + string(SNR(1)) + ' dB', 'SNR = ' + string(SNR(end)) + ' dB','(±A*sqrt(Ts/2),±A*sqrt(Ts/2))');
+            hold off;
+           
         end 
         
         
-        function output = bpsk_correlator(obj,signal,SNR)
+        function [output1,output2] = correlator(obj,signal,SNR)
             
             %t = 0:obj.Tx.sampling_period:obj.Tx.bit_period-obj.Tx.sampling_period;
             
-            t = obj.Tx.time;
-            g_T = sqrt(2/obj.Tx.bit_period)*ones(1,length(t));
-            basis = g_T.*cos(2*pi*obj.Tx.center_frequency.*t);
+            
+            Ts = 2*obj.Tx.bit_period;
+            t = obj.Tx.IQ_time;
+            g_T = sqrt(2/Ts)*ones(1,length(t));
+            basis1 = g_T.*cos(2*pi*obj.Tx.center_frequency.*t);
+            basis2 = g_T.*sin(2*pi*obj.Tx.center_frequency.*t);
                 
             w = 0; 
-            Tb = obj.Tx.samples_per_bit;
-            output = zeros(obj.Tx.num_bits,length(SNR),obj.Tx.samples_per_bit);
-            
+            nTs = obj.Tx.IQ_sampling_rate/(obj.Tx.bit_rate/2); %samples per bit for QPSK 
+            %nTs = obj.Tx.samples_per_bit;
+            output1 = zeros(obj.Tx.num_bits/2,length(SNR),nTs);
+            output2 = zeros(obj.Tx.num_bits/2,length(SNR),nTs);
             %figure;
             %plot(obj.Tx.time,signal(1,:).*basis);
             
-            for j = 1:obj.Tx.num_bits
+            for j = 1:obj.Tx.num_bits/2
                 
-                y = cumtrapz(t((1+w):(Tb+w)),signal(:,(1+w):(Tb+w)).*basis((1+w):(Tb+w)),2);
+                y1 = cumtrapz(t((1+w):(nTs+w)),signal(:,(1+w):(nTs+w)).*basis1((1+w):(nTs+w)),2);
+                y2 = cumtrapz(t((1+w):(nTs+w)),signal(:,(1+w):(nTs+w)).*basis2((1+w):(nTs+w)),2);
+                output1(j,:,:) = y1;
+                output2(j,:,:) = y2;
                 
-                output(j,:,:) = y;
-                
-                w = j*obj.Tx.samples_per_bit;
+                w = j*nTs;
                 %t = t + obj.Tx.bit_period;
                 
             end 
             
-            output = permute(output,[2 3 1]);
+            output1 = permute(output1,[2 3 1]);
+            output2 = permute(output2,[2 3 1]);
+            
             
 %             g_T = sqrt(2/obj.Tx.bit_period)*ones(1,length(obj.Tx.time));
 %             basis = g_T.*cos(2*pi*obj.Tx.center_frequency.*obj.Tx.time);
@@ -103,16 +174,28 @@ classdef Receiver < handle
 %             end 
 %             
             
-            output= reshape(output,[size(output,1), size(output,2)*size(output,3)]);
+            output1= reshape(output1,[size(output1,1), size(output1,2)*size(output1,3)]);
+            output2= reshape(output2,[size(output2,1), size(output2,2)*size(output2,3)]);
+            
             figure;
-            plot(obj.Tx.time,output(1,:));
-            title('BPSK Correlator Output');
+            plot(obj.Tx.IQ_time,output1(1,:));
+            title('QPSK Correlator I-Output');
             hold on;
-            plot(obj.Tx.time,output(end,:));
+            plot(obj.Tx.IQ_time,output1(end,:));
             ylabel('Amplitude');
             xlabel('Time (s)');
             legend('SNR = ' + string(SNR(1)) + ' dB', 'SNR = ' + string(SNR(end)) + ' dB');
+            hold off;
             
+            figure;
+            plot(obj.Tx.IQ_time,output2(1,:));
+            title('QPSK Correlator Q-Output');
+            hold on;
+            plot(obj.Tx.IQ_time,output2(end,:));
+            ylabel('Amplitude');
+            xlabel('Time (s)');
+            legend('SNR = ' + string(SNR(1)) + ' dB', 'SNR = ' + string(SNR(end)) + ' dB');
+            hold off;
         end  
         
     end 

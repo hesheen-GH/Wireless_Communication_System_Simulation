@@ -19,10 +19,10 @@ classdef Channel < handle
         function output = AWGN(obj,SNR)
             output = obj.signal + sqrt(obj.noise_power).*randn(1,length(obj.signal));
             figure;
-            plot(obj.Tx.time,output(1,:));
+            plot(obj.Tx.IQ_time,output(1,:));
             title('Modulated Signal + AWGN');
             hold on;
-            plot(obj.Tx.time,output(end,:));
+            plot(obj.Tx.IQ_time,output(end,:));
             ylabel('Amplitude');
             xlabel('Time (s)');
             legend('SNR = ' + string(SNR(1)) + ' dB', 'SNR = ' + string(SNR(end)) + ' dB');
